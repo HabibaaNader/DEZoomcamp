@@ -1,0 +1,57 @@
+version: "3.9"
+services:
+  db:
+    container_name: postgres
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: 'postgres'
+      POSTGRES_PASSWORD: 'postgres'
+      POSTGRES_DB: 'ny_taxi'
+    ports:
+      - '5433:5432'  # Host port 5433 maps to container port 5432
+    volumes:
+      - vol-pgdata:/var/lib/postgresql/data
+    networks:
+      - pg-network
+
+  pgadmin:
+    container_name: pgadmin
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "pgadmin@pgadmin.com"
+      PGADMIN_DEFAULT_PASSWORD: "pgadmin"
+    ports:
+      - "8080:80"  # Host port 8080 maps to container port 80 (for pgAdmin UI)
+    volumes:
+      - vol-pgadmin_data:/var/lib/pgadmin  
+    networks:
+      - pg-network
+
+  python-app:
+    container_name: python_app
+    build:
+      context: .
+    command: >
+      --user postgres
+      --password postgres
+      --host db
+      --port 5432
+      --db ny_taxi
+      --csv green_tripdata_2019-10.csv.gz
+      --table green_tripdata
+    depends_on:
+      - db
+    networks:
+      - pg-network
+    volumes:
+      - ./green_tripdata_2019-10.csv.gz:/app/green_tripdata_2019-10.csv.gz
+
+volumes:
+  vol-pgdata:
+    name: vol-pgdata
+  vol-pgadmin_data:
+    name: vol-pgadmin_data
+
+networks:
+  pg-network:
+    driver: bridge
